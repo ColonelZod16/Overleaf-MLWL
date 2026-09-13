@@ -1,0 +1,220 @@
+\bA_T=\bG_T\herm\bG_T-\lambda_{\rm null}\bH_u\bH_u\herm, \qquad
+\lambda_{\rm null}=0.5, \label{eq:wT}
+\end{equation}
+followed by unit-norm normalization. This trades target illumination against
+communication leakage, consistent with leakage-aware ISAC beam design
+\cite{wang2025hybrid,lyu2024crb}.
+
+With $g_{kj}=|\bh_k\herm\bw_j|^2$, the SINRs are
+\begin{align}
+\gamma_f &= \frac{a_fg_{ff}P}{a_ng_{ff}P+a_Tg_{fT}P+\sigma^2}, \label{eq:gf}\\
+\gamma_n &= \frac{a_ng_{nn}P}{a_Tg_{nT}P+\sigma^2}, \label{eq:gn}\\
+\gamma_s &= \frac{a_T|\bm{u}_T\herm\bG_T\bw_T|^2P}{\sigma^2}, \label{eq:gs}
+\end{align}
+where $\sigma^2$ is the noise power and $\bm{u}_T$ is the sensing receive
+combiner. The achievable rates are $R_k=\log_2(1+\gamma_k)$,
+$k\in\{n,f,s\}$.
+
+The weighted system rate is
+\begin{equation}
+\Rdl=\omega_c(R_n+R_f)+\omega_sR_s,\qquad \omega_c+\omega_s=1.
+\label{eq:rdl}
+\end{equation}
+The communication rates are summed in the \emph{objective} because the near and
+far users occupy the same NOMA resource block, so $R_n+R_f$ is the cluster
+spectral efficiency. The weights $\omega_c$ and $\omega_s$ are design
+priorities that trade communication throughput against sensing performance; in
+our simulations they are fixed to $0.7$ and $0.3$, respectively. Importantly,
+using a sum in the objective does not replace individual QoS protection.
+
+\subsection{Problem Formulation}\label{sec:prob}
+We jointly optimize the power split $\bm{a}$ and RIS phases
+$\bm{\phi}=[\phi_1,\ldots,\phi_N]$. The communication sum rate is retained as a
+cluster-level QoS measure, while individual user constraints are added in the
+same spirit as the per-device QoS constraint in (9b) of~\cite{zou2023ml}. The
+resulting problem is
+\begin{subequations}\label{eq:prob}
+\begin{align}
+\text{(P1)}\quad \max_{\bm{a},\bm{\phi}}\quad & \Rdl \label{eq:obj}\\
+\text{s.t.}\quad
+& R_n+R_f\geq R_{\mathrm{th},c}, \label{eq:qosc}\\
+& R_k\geq R_{\mathrm{th},k},\quad k\in\{n,f\}, \label{eq:qosu}\\
+& R_s\geq R_{\mathrm{th},s}, \label{eq:qoss}\\
+& a_n+a_f+a_T=1,\quad a_n,a_f,a_T\geq0, \label{eq:simplex}\\
+& |e^{j\phi_i}|=1,\quad i=1,\ldots,N. \label{eq:unit}
+\end{align}
+\end{subequations}
+The aggregate constraint~\eqref{eq:qosc} is useful because the two NOMA users
+share one time-frequency resource block, so $R_n+R_f$ directly measures the
+communication service delivered by the cluster. It also matches the
+cluster-level QoS term used by the implemented training loss. On its own,
+however, a sum threshold is insufficient: a very large near-user rate could
+compensate for an unacceptable far-user rate. Constraint~\eqref{eq:qosu}
+therefore adds the individual protection requested in the formulation, exactly
+analogous to writing a QoS condition for each device as in (9b) of
+\cite{zou2023ml}. Thus, the sum threshold controls aggregate communication
+quality while the individual thresholds prevent user starvation. The sensing
+requirement is enforced separately by~\eqref{eq:qoss}. The ideal-RIS assumption
+$\beta_i=1$ is fixed rather than optimized, and the phase parameterization
+$e^{j\phi_i}$ enforces unit modulus automatically.
+
+Problem~(P1) remains non-convex because the power variables and RIS phases are
+coupled through the cascaded channels. We therefore enforce the QoS conditions
+through penalty terms during learning, while the softmax output enforces the
+power simplex exactly.
+
+%==============================================================================
+\section{Proposed MAML-Based Solution}
+The implementation follows a bilevel power/phase decomposition. The
+three-dimensional power vector is predicted by a compact neural network, while
+the $N$ RIS phases are adapted for each channel realization. This follows the
+basic motivation of~\cite{zou2023ml}: learn the lower-dimensional resource map
+and refine the channel-specific RIS configuration with gradient-based
+adaptation.
+
+\subsection{Feature Map and Power-Allocation Network}\label{sec:feat}
+For a given phase vector, the cascaded channels and the six effective gains
+$\{g_{nn},g_{ff},g_{sT},g_{fn},g_{fT},g_{nT}\}$ are computed. They are converted
+to dB and concatenated with the communication/sensing QoS levels and the SNR
+budget, giving a nine-dimensional input feature vector $\bm z$. The power
+network contains three hidden layers with 256 neurons per layer, LayerNorm and
+LeakyReLU activations, followed by a three-neuron softmax head. Hence
+\begin{equation}
+\bm a=\operatorname{softmax}(f_{\bm\theta}(\bm z)),
+\end{equation}
+which enforces $a_n+a_f+a_T=1$ and $a_k\geq0$ by construction.
+
+\subsection{Joint Power-Allocation and Phase Adaptation}
+For a channel sample and the current phase vector $\bm\phi^{(j)}$, the network
+first predicts
+\begin{equation}
+\bm a^{(j)}=\operatorname{softmax}
+\left(f_{\bm\theta}(\bm z(\bm\phi^{(j)}))\right). \label{eq:powerpred}
+\end{equation}
+The implemented constrained loss is
+\begin{align}
+\ell^{(j)}={}&-\Rdl
++\lambda_c\big(R_{\mathrm{th},c}-R_n-R_f\big)_+
++\lambda_s\big(R_{\mathrm{th},s}-R_s\big)_+ \notag\\
+&+\lambda_n\big(R_{\mathrm{th},n}-R_n\big)_+
++\lambda_f\big(R_{\mathrm{th},f}-R_f\big)_+, \label{eq:sampleloss}
+\end{align}
+where $(x)_+=\max(x,0)$. Equation~\eqref{eq:sampleloss} makes explicit why the
+aggregate and individual communication thresholds coexist: $\lambda_c$ protects
+cluster throughput, whereas $\lambda_n$ and $\lambda_f$ penalize starvation of
+either user.
+
+The RIS phase is represented by
+$\theta_i=e^{j\phi_i}=\cos\phi_i+j\sin\phi_i$, so unit modulus is satisfied for
+any real $\phi_i$. For each channel, the phase vector is randomly initialized
+and adapted for $K$ steps using Adam on~\eqref{eq:sampleloss},
+\begin{equation}
+\bm\phi^{(j+1)}=\operatorname{Adam}_{\phi}
+\left(\bm\phi^{(j)},\nabla_{\bm\phi^{(j)}}\ell^{(j)};\eta_{\phi}\right),
+\label{eq:inner}
+\end{equation}
+with inner learning rate $\eta_{\phi}$. Since the effective gains change after
+every phase update, the feature vector and power split are recomputed at each
+inner step.
+
+\subsection{First-Order Meta-Update}
+After the $K$ phase-adaptation steps, the final rates and loss are recomputed at
+$\bm\phi^{(K)}$. The implementation uses a first-order MAML approximation: the
+adapted phase is treated as fixed during the outer network update rather than
+backpropagating second-order derivatives through the entire Adam trajectory.
+The outer update is therefore
+\begin{equation}
+\bm\theta\leftarrow\bm\theta-\alpha
+\nabla_{\bm\theta}\frac{1}{B}\sum_{b=1}^{B}
+\ell_b\big(\bm\theta,\bm\phi_b^{(K)}\big), \label{eq:outer}
+\end{equation}
+where $B$ is the mini-batch size. This retains the key meta-learning idea--the
+power map is trained on channels after per-instance RIS adaptation--while
+avoiding the memory and numerical burden of the full higher-order graph. In the
+implemented fair, high-SINR configuration, the full second-order path was found
+to produce unstable/non-finite meta-gradients, which motivated the first-order
+variant.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  >=Stealth,
+  node distance=5mm and 7mm,
+  box/.style={draw,rounded corners,align=center,minimum width=20mm,minimum height=7mm,font=\scriptsize},
+  arr/.style={->,thick},
+  darr/.style={->,thick,dashed}]
+\node[box,fill=yellow!12] (env) {Channel sample\\$\{\bG,\bm r_n,\bm r_f,\bG_T\}$};
+\node[box,fill=blue!8,below left=of env] (phase) {RIS phase\\$\bm\phi^{(j)}$};
+\node[box,fill=red!8,below right=of env] (net) {Power network\\$f_{\bm\theta}$};
+\node[box,fill=green!10,below=12mm of env] (loss) {Rates + penalties\\$\ell^{(j)}$};
+\draw[arr] (env) -- (phase);
+\draw[arr] (env) -- (net);
+\draw[arr] (phase) -- node[left,font=\scriptsize] {gains/features} (loss);
+\draw[arr] (net) -- node[right,font=\scriptsize] {$\bm a^{(j)}$} (loss);
+\draw[darr] (loss.west) to[bend left=18] node[below,font=\scriptsize] {Adam, $K$ steps} (phase.south);
+\draw[darr] (loss.east) to[bend right=18] node[below,font=\scriptsize] {first-order outer update} (net.south);
+\end{tikzpicture}
+\caption{First-order MAML-based joint power/phase design. The inner loop adapts
+the RIS phase and recomputes the network power split; the outer loop updates the
+power network using the phase-adapted channel while ignoring higher-order
+derivatives through the inner optimizer.}
+\label{fig:maml}
+\end{figure}
+
+\subsection{Training and Prediction Procedure}
+Algorithm~\ref{alg:maml} summarizes the implementation. At inference, the same
+$K$-step phase adaptation is performed for an unseen channel and the final
+softmax output provides the power allocation. Thus prediction is not a pure
+one-shot neural-network call; it is a short learned-plus-optimization procedure
+that trades a small fixed online cost for substantially better phase adaptation.
+
+\begin{algorithm}[t]
+\SetAlgoLined
+\DontPrintSemicolon
+\KwIn{channel data; inner steps $K$; inner Adam rate $\eta_{\phi}$; outer rate
+$\alpha$; penalties $\lambda_c,\lambda_s,\lambda_n,\lambda_f$.}
+\KwOut{trained power-map parameters $\bm\theta^\star$.}
+Initialize $\bm\theta$\;
+\While{not converged}{
+ Sample a mini-batch of $B$ channels\;
+ \ForEach{channel $b$}{
+   Initialize $\bm\phi_b^{(0)}\sim\mathcal U([0,2\pi)^N)$\;
+   \For{$j=0$ \KwTo $K-1$}{
+     Compute phase-dependent channels/gains and $\bm z_b^{(j)}$\;
+     Predict $\bm a_b^{(j)}$ using~\eqref{eq:powerpred}\;
+     Evaluate $R_n,R_f,R_s$ and~\eqref{eq:sampleloss}\;
+     Update $\bm\phi_b^{(j+1)}$ with inner Adam\;
+   }
+   Recompute $\bm a_b^{(K)}$ and final loss at the adapted phase\;
+ }
+ Update $\bm\theta$ with Adam using the first-order gradient in~\eqref{eq:outer}\;
+}
+Select $\bm\theta^\star$ by validation score\;
+\caption{First-order MAML-based power and RIS-phase optimization}
+\label{alg:maml}
+\end{algorithm}
+
+\subsection{Convergence Analysis}
+A global convergence guarantee is not claimed. The objective is non-convex, the
+unit-modulus RIS parameterization couples all rates through the cascaded channel,
+and the hinge penalties in~\eqref{eq:sampleloss} are non-smooth exactly at the
+QoS boundaries. Moreover, as discussed for the related RIS-NOMA MAML method in
+\cite{zou2023ml}, standard smooth MAML convergence theorems do not directly
+cover an architecture in which the inner and outer loops optimize different
+variables. Our first-order approximation further discards the higher-order
+dependence of the adapted phase on $\bm\theta$. Consequently, convergence is
+assessed empirically: the inner Adam loop is run for a fixed number of steps and
+the outer training curve is checked for a stable loss/rate plateau across the
+reported hyperparameter settings.
+
+\subsection{Computational Complexity}
+Let $P_{\bm\theta}$ denote the power-network parameter count. With nine inputs,
+three 256-unit hidden layers, LayerNorm, and a three-output head, the implemented
+network contains approximately $1.36\times10^5$ trainable parameters. Computing
+the user cascades costs $\mathcal O(MN)$, while forming the sensing matrix and
+its $M\times M$ leakage-aware eigenvector adds approximately
+$\mathcal O(MN+M^3)$. Therefore, one inner prediction/adaptation step costs
+\begin{equation}
+\mathcal O\!\left(P_{\bm\theta}+MN+M^3\right),
+\end{equation}
+and online prediction for one channel realization costs
