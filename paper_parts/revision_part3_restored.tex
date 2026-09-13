@@ -1,0 +1,245 @@
+\begin{equation}
+\mathcal O\!\left(K(P_{\bm\theta}+MN+M^3)\right), \label{eq:onlinecomplex}
+\end{equation}
+plus one final forward evaluation of the same order. For a batch of $B$ samples,
+an offline training iteration scales as
+$\mathcal O(BK(P_{\bm\theta}+MN+M^3))$. Because the implemented outer update is
+first-order, it does not store a full second-order graph through all $K$ inner
+steps, reducing memory and derivative cost relative to full MAML. This is the
+relevant complexity for \emph{prediction}: one compact network plus a fixed,
+short RIS adaptation, rather than solving a fresh long alternating-optimization
+problem from scratch for every channel.
+
+%==============================================================================
+\section{Numerical Results and Analysis}
+Table~\ref{tab:sim} reports the parameters used by the fair NOMA-RIS simulator
+and the final learning/evaluation scripts. The channel generator uses
+$10{,}000$ realizations with a 90/10 train/validation split. The node geometry is
+specified in the simulator by link distances rather than unique Cartesian
+coordinates; reporting these distances therefore reproduces the propagation
+model without inventing coordinates that are not present in the code.
+
+\begin{table}[t]
+\centering
+\caption{System, channel, and learning parameters.}
+\label{tab:sim}
+\scriptsize
+\begin{tabular}{@{}ll@{}}
+\toprule
+Parameter & Value \\ \midrule
+BS antennas $M$ & 4 \\
+RIS elements $N$ & 8 nominal; $\{8,16,32,64\}$ in RIS-size sweep \\
+Power-sweep RIS size & $N=16$ \\
+Monte-Carlo realizations & 10,000 (90\% train, 10\% validation) \\
+BS--RIS distance $d_{BR}$ & 8 m \\
+RIS--near distance $d_{RD_n}$ & 3 m \\
+RIS--far distance $d_{RD_f}$ & 25 m \\
+RIS--target / target--RIS & $d_{RT}=d_{TR}=6$ m \\
+Direct BS--near / BS--far refs. & $d_{BD_n}=10$ m, $d_{BD_f}=25$ m \\
+Reference path gain $PL_0$ & $10^{-3}$ ($-30$ dB) \\
+Path-loss exponents & $2.2,2.8,2.8,2.3,2.3,3.8,3.8$ \\
+Nakagami-$m$ parameters & $m_{BR}=2$, $m_{RD_n}=m_{RD_f}=1$; \\
+ & $m_{RT}=m_{TR}=3$, $m_{BD_n}=m_{BD_f}=1$ \\
+Target gain $\beta_T$ & 40 dB \\
+RIS amplitude $\beta_i$ / efficiency & 1 / 1 (ideal passive RIS) \\
+Bandwidth / temperature / NF & 1 MHz / 290 K / 6 dB \\
+Generator power $P_{\rm tot}$ & 40 dBm; trainer permits power override \\
+RIS-size figure operating power & 15 dBm \\
+Power sweep & $5,10,15,20,25$ dBm \\
+Initial NOMA split $(a_n,a_f,a_T)$ & $(0.20,0.55,0.25)$ \\
+Communication beam weights & far/near $=0.7/0.3$ \\
+Sensing leakage penalty $\lambda_{\rm null}$ & 0.5 \\
+Objective weights $(\omega_c,\omega_s)$ & $(0.7,0.3)$ \\
+NOMA cluster/sensing QoS & $R_{\rm th,c}=21.7$, $R_{\rm th,s}=2.9$ bit/s/Hz \\
+Individual training floors & $R_{\rm th,n}=R_{\rm th,f}=1$ bit/s/Hz \\
+Penalty weights $(\lambda_c,\lambda_s,\lambda_n,\lambda_f)$ & $(2,50,15,20)$ \\
+Power network & 9--256--256--256--3, softmax output \\
+NOMA-RIS result checkpoints & batch 64, lr $10^{-4}$, 40 epochs, $K=10$ \\
+OMA-RIS result checkpoints & batch 64, lr $10^{-4}$, 40 epochs, $K=5$ \\
+No-RIS result checkpoints & batch 128, lr $5\times10^{-4}$, 60 epochs \\
+Inner phase optimizer & Adam, learning rate 0.1 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The aggregate NOMA threshold in Table~\ref{tab:sim} comes from the fair NOMA
+dataset, where it was chosen to keep the cluster QoS active; the individual
+near/far floors are the defaults used by the training scripts. The OMA fair
+dataset uses its own calibrated aggregate/sensing thresholds
+($R_{\rm th,c}=12$ and $R_{\rm th,s}=2$ bit/s/Hz). The service-rate outage
+thresholds stored by the MATLAB generators are diagnostic quantities and are
+not the same as the optimization penalties in~\eqref{eq:sampleloss}.
+
+The implementation records per-iteration loss and weighted rate for convergence
+monitoring, while model selection uses a held-out validation score. The present
+analysis therefore relies on the fixed-step inner optimizer, validation-based
+checkpointing, and the convergence limitations discussed in
+Section~III-E rather than asserting a closed-form global guarantee.
+
+Fig.~\ref{fig:training} shows the MAML meta-loss~\eqref{eq:sampleloss} over training
+iterations for several batch/learning-rate settings. The loss decreases smoothly
+and the weighted sum-rate climbs steadily, with no epoch-one collapse,
+indicating stable second-order meta-optimization; the steady-state panel
+confirms continued, generalizing improvement.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{fig_training.eps}
+  \caption{MAML meta-loss versus training iteration over a batch/learning-rate
+  sweep ($M{=}4$, $N{=}8$). (a)~Full trajectory; (b)~steady state
+  ($\text{iter}\!\ge\!200$).}
+  \label{fig:training}
+\end{figure}
+
+Fig.~\ref{fig:cdf} plots the empirical CDF of the weighted sum-rate $\Rdl$ over
+the test set for the ablation. Joint optimization of phase and power
+(\textsf{fullOptimized}) stochastically dominates the partial designs, raising
+the median from $\sim\!5.0$ to $\sim\!6.7$~bps/Hz; phase optimization accounts
+for most of the rate gain, while the learned power split adds a further,
+QoS-critical improvement. This is reflected in Fig.~\ref{fig:qos}: the joint
+QoS-violation rate falls monotonically from $29.4\%$ (no optimization) to
+$0.1\%$ (proposed), with both the communication ($q_c$) and sensing ($q_s$)
+constraints satisfied almost surely.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{fig_cdf.eps}
+  \caption{CDF of the weighted sum-rate $\Rdl$ over the test set for the five
+  ablation configurations.}
+  \label{fig:cdf}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{fig_qos.eps}
+  \caption{QoS-violation fraction (lower is better). The joint violation rate
+  drops from $29.4\%$ to $0.1\%$ along the ablation.}
+  \label{fig:qos}
+\end{figure}
+
+% --- OPTIONAL extra ablation figures (uncomment to include) ------------------
+% \begin{figure}[t]\centering
+%   \includegraphics[width=\columnwidth]{fig_improvement.jpg}
+%   \caption{Per-metric improvement over the unoptimized baseline.}\label{fig:improvement}\end{figure}
+% \begin{figure}[t]\centering
+%   \includegraphics[width=\columnwidth]{fig_perleg.jpg}
+%   \caption{Per-leg rate CDFs ($R_n$, $R_f$, $R_s$).}\label{fig:perleg}\end{figure}
+
+Fig.~\ref{fig:rateN} reports $\Rsum$ versus the RIS size
+$N\in\{8,16,32,64\}$ at $P=15$~dBm. The rate grows monotonically with $N$ for
+both access schemes—from $6.9$ to $11.4$~bps/Hz for NOMA and from $4.1$ to
+$7.3$~bps/Hz for OMA—and NOMA retains an $\sim\!65\%$ advantage throughout
+showing that the passive aperture and the access scheme contribute complementary
+gains.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{fig_rate_N.eps}
+  \caption{Weighted sum-rate versus RIS size $N$ at $P=15$~dBm. NOMA dominates
+  OMA at every aperture; both scale with $N$.}
+  \label{fig:rateN}
+\end{figure}
+
+Finally, Fig.~\ref{fig:rateP} sweeps the transmit power. Panel~(a) establishes
+the ordering NOMA-RIS $>$ NOMA $>$ OMA-RIS $>$ OMA across the whole range:
+NOMA's full-time superposition outperforms OMA's orthogonal slots, and the RIS
+adds a consistent margin on top of each access scheme (e.g.\ a $\sim\!27\%$ RIS
+gain for NOMA at $P=15$~dBm). Panel~(b) shows the corresponding QoS-violation
+rate: NOMA-RIS reaches near-zero violation already at low power, whereas the
+no-RIS and OMA schemes need substantially more power to become feasible,
+quantifying the role of the RIS in jointly meeting the sensing and communication
+QoS.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{fig_rate_P.eps}
+  \caption{(a)~Weighted sum-rate and (b)~joint QoS-violation rate versus
+  transmit power for the four schemes.}
+  \label{fig:rateP}
+\end{figure}
+
+Finally, two practical points follow. On \emph{runtime}, the online stage is a
+single forward pass of $f_{\bm\theta}$ plus $K{=}5$ light inner steps---orders
+of magnitude below per-instance AO---so the design fits the short coherence
+times that motivate learning-based ISAC. On \emph{constraint granularity},
+replacing the sum-rate floor \eqref{eq:qosc} with per-user penalties
+($\lambda_n,\lambda_f{>}0$ in~\eqref{eq:sampleloss}) lets the operator dial the
+near/far fairness trade-off, shifting the learned split toward the weaker user
+at a modest cost in aggregate rate and with no change to the pipeline.
+
+%==============================================================================
+\section{Conclusion}
+A MISO RIS-assisted NOMA-ISAC downlink was investigated with joint power and
+phase design. The revised formulation combines an aggregate NOMA-cluster QoS
+constraint with individual near/far-user floors and a separate sensing floor,
+which preserves cluster efficiency while preventing a strong user from masking
+a weak one. The implemented solver uses a compact softmax power network and
+per-channel RIS-phase adaptation, followed by a first-order meta-update. The
+paper now reports the actual channel distances, fading/path-loss parameters,
+power/RIS settings, convergence limitations, and online prediction complexity.
+The original result figures and their surrounding discussion are retained and the figure files are provided in EPS form for submission.
+
+%==============================================================================
+\begin{thebibliography}{1}
+\bibitem{liu2022isac}
+F.~Liu \emph{et al.}, ``Integrated sensing and communications: Toward
+dual-functional wireless networks for 6G and beyond,''
+\emph{IEEE J. Sel. Areas Commun.}, vol.~40, no.~6, pp.~1728--1767, Jun.~2022.
+
+\bibitem{deng2025mmwave}
+K.~Deng, X.~Wang, H.~Xu, Q.~Song, R.~Zhang, and Y.~Qian, ``Balancing
+communication and sensing hybrid beamforming with rank-1 optimization for
+mmWave ISAC systems,'' \emph{IEEE Wireless Commun. Lett.}, vol.~14, no.~9,
+pp.~2738--2742, Sep.~2025.
+
+\bibitem{wu2020ris}
+Q.~Wu and R.~Zhang, ``Towards smart and reconfigurable environment: Intelligent
+reflecting surface aided wireless network,'' \emph{IEEE Commun. Mag.}, vol.~58,
+no.~1, pp.~106--112, Jan.~2020.
+
+\bibitem{wang2025hybrid}
+L.~Wang, L.~F. Abanto-Leon, and A.~Asadi, ``Joint hybrid beamforming and RIS
+phase shift design for RIS-enabled mmWave ISAC system,'' \emph{IEEE Trans. Veh.
+Technol.}, vol.~74, no.~6, pp.~9149--9164, Jun.~2025.
+
+\bibitem{lyu2024crb}
+W.~Lyu \emph{et al.}, ``CRB minimization for RIS-aided mmWave integrated sensing
+and communications,'' \emph{IEEE Internet Things J.}, vol.~11, no.~10,
+pp.~18381--18393, May~2024.
+
+\bibitem{ke2025rsma}
+H.~Ke, J.~Xu, W.~Xu, C.~Ding, and D.~W.~K. Ng, ``Rate splitting and beamforming
+design for RIS-assisted RSMA-enhanced ISAC networks,'' \emph{IEEE Wireless
+Commun. Lett.}, vol.~14, no.~6, pp.~1738--1742, Jun.~2025.
+
+\bibitem{zou2023ml}
+Y.~Zou, Y.~Liu, X.~Mu, X.~Zhang, Y.~Liu, and C.~Yuen, ``Machine learning in
+RIS-assisted NOMA IoT networks,'' \emph{IEEE Internet Things J.}, vol.~10,
+no.~22, pp.~19427--19440, Nov.~2023.
+
+\bibitem{wei2026ris}
+T.~Wei \emph{et al.}, ``Machine learning-driven joint RIS partitioning,
+beamforming, and phase shifts design for mmWave ISAC systems,'' \emph{IEEE
+Wireless Commun. Lett.}, vol.~15, 2026.
+
+\bibitem{maml}
+C.~Finn, P.~Abbeel, and S.~Levine, ``Model-agnostic meta-learning for fast
+adaptation of deep networks,'' in \emph{Proc. ICML}, 2017, pp.~1126--1135.
+
+\bibitem{fallah2020maml}
+A.~Fallah, A.~Mokhtari, and A.~Ozdaglar, ``On the convergence theory of
+gradient-based model-agnostic meta-learning algorithms,'' in \emph{Proc.
+AISTATS}, 2020, pp.~1082--1092.
+
+\bibitem{ji2022maml}
+K.~Ji, J.~Yang, and Y.~Liang, ``Theoretical convergence of multi-step
+model-agnostic meta-learning,'' \emph{J. Mach. Learn. Res.}, vol.~23, pp.~1--41,
+2022.
+
+\bibitem{sun2024noma}
+Y.~Sun \emph{et al.}, ``On the study of NOMA-assisted integrated sensing and
+communication networks,'' \emph{IEEE Trans. Commun.}, vol.~72, no.~11,
+pp.~7278--7293, Nov.~2024.
+\end{thebibliography}
+
+\end{document}
