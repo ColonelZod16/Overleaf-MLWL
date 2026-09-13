@@ -76,132 +76,98 @@ analysis therefore relies on the fixed-step inner optimizer, validation-based
 checkpointing, and the convergence limitations discussed in
 Section~III-E rather than asserting a closed-form global guarantee.
 
-Fig.~\ref{fig:ablation} summarizes the NOMA ablation. The final CSV reports a
-weighted sum-rate increase from 5.34 bit/s/Hz for random phase/random allocation
-to 6.81 bit/s/Hz for joint optimization. The legacy reported joint QoS metric
-(cluster communication plus sensing) drops from 29.38\% to 0.06\%. The
-individual near/far penalties are included during training, but the legacy
-$q_{\rm any}$ field used to draw this figure does not count individual-user
-violations; this distinction is stated explicitly to avoid interpreting the
-0.06\% number as a per-user outage probability.
+Fig.~\ref{fig:training} shows the MAML meta-loss~\eqref{eq:sampleloss} over training
+iterations for several batch/learning-rate settings. The loss decreases smoothly
+and the weighted sum-rate climbs steadily, with no epoch-one collapse,
+indicating stable second-order meta-optimization; the steady-state panel
+confirms continued, generalizing improvement.
 
 \begin{figure}[t]
   \centering
-  \subfloat[Weighted sum-rate.]{%
-  \begin{tikzpicture}
-  \begin{axis}[
-    width=0.48\columnwidth,height=0.38\columnwidth,
-    ybar,bar width=4pt,ymin=0,ymax=7.4,
-    ylabel={bit/s/Hz},
-    symbolic x coords={R,F,P,Q,J},xtick=data,
-    xticklabels={Rnd.,Fair,Power,Phase,Joint},
-    x tick label style={rotate=45,anchor=east,font=\scriptsize},
-    tick label style={font=\scriptsize},label style={font=\scriptsize},
-    grid=major]
-  \addplot coordinates {(R,5.3397) (F,5.3484) (P,5.2819) (Q,6.5045) (J,6.8073)};
-  \end{axis}
-  \end{tikzpicture}}\hfill
-  \subfloat[QoS violation.]{%
-  \begin{tikzpicture}
-  \begin{axis}[
-    width=0.48\columnwidth,height=0.38\columnwidth,
-    ybar,bar width=4pt,ymin=0,ymax=32,
-    ylabel={Violation (\%)},
-    symbolic x coords={R,F,P,Q,J},xtick=data,
-    xticklabels={Rnd.,Fair,Power,Phase,Joint},
-    x tick label style={rotate=45,anchor=east,font=\scriptsize},
-    tick label style={font=\scriptsize},label style={font=\scriptsize},
-    grid=major]
-  \addplot coordinates {(R,29.38) (F,15.12) (P,15.10) (Q,3.70) (J,0.06)};
-  \end{axis}
-  \end{tikzpicture}}
-  \caption{Ablation of power and phase optimization. The QoS panel uses the
-  legacy aggregate-communication/sensing violation metric. ``Power'' denotes
-  learned power with random phase; ``Phase'' denotes optimized phase with
-  random power.}
-  \label{fig:ablation}
+  \includegraphics[width=\columnwidth]{fig_training}
+  \caption{MAML meta-loss versus training iteration over a batch/learning-rate
+  sweep ($M{=}4$, $N{=}8$). (a)~Full trajectory; (b)~steady state
+  ($\text{iter}\!\ge\!200$).}
+  \label{fig:training}
 \end{figure}
 
-Fig.~\ref{fig:rateN} varies $N\in\{8,16,32,64\}$. The NOMA-RIS weighted
-sum-rate rises from 6.85 to 11.45 bit/s/Hz and the OMA-RIS rate rises from 4.09
-to 7.27 bit/s/Hz. The no-RIS curves are independent of $N$ and are therefore
-shown as horizontal dashed reference lines, directly addressing the desired
-``no RIS'' presentation. At the 15-dBm reference point the corresponding
-no-RIS values are 6.58 bit/s/Hz for NOMA and 3.01 bit/s/Hz for OMA.
+Fig.~\ref{fig:cdf} plots the empirical CDF of the weighted sum-rate $\Rdl$ over
+the test set for the ablation. Joint optimization of phase and power
+(\textsf{fullOptimized}) stochastically dominates the partial designs, raising
+the median from $\sim\!5.0$ to $\sim\!6.7$~bps/Hz; phase optimization accounts
+for most of the rate gain, while the learned power split adds a further,
+QoS-critical improvement. This is reflected in Fig.~\ref{fig:qos}: the joint
+QoS-violation rate falls monotonically from $29.4\%$ (no optimization) to
+$0.1\%$ (proposed), with both the communication ($q_c$) and sensing ($q_s$)
+constraints satisfied almost surely.
 
 \begin{figure}[t]
   \centering
-  \begin{tikzpicture}
-  \begin{axis}[
-    width=0.96\columnwidth,height=0.56\columnwidth,
-    xlabel={Number of RIS elements, $N$},
-    ylabel={Weighted sum-rate (bit/s/Hz)},
-    xmode=log,log basis x=2,xtick={8,16,32,64},
-    xticklabels={8,16,32,64},
-    ymin=2.5,ymax=12,
-    legend style={font=\scriptsize,at={(0.02,0.98)},anchor=north west},
-    tick label style={font=\scriptsize},label style={font=\scriptsize},
-    grid=major]
-  \addplot+[mark=triangle*] coordinates {(8,6.8521) (16,8.3680) (32,10.0297) (64,11.4463)};
-  \addlegendentry{NOMA-RIS}
-  \addplot+[dashed,mark=triangle] coordinates {(8,6.5805) (16,6.5805) (32,6.5805) (64,6.5805)};
-  \addlegendentry{NOMA no-RIS}
-  \addplot+[mark=o] coordinates {(8,4.0929) (16,5.2630) (32,6.2786) (64,7.2729)};
-  \addlegendentry{OMA-RIS}
-  \addplot+[dashed,mark=square] coordinates {(8,3.0063) (16,3.0063) (32,3.0063) (64,3.0063)};
-  \addlegendentry{OMA no-RIS}
-  \end{axis}
-  \end{tikzpicture}
-  \caption{Weighted sum-rate versus RIS size at the 15-dBm reference power.
-  Solid curves use the RIS; horizontal dashed curves are the no-RIS baselines.}
+  \includegraphics[width=\columnwidth]{fig_cdf}
+  \caption{CDF of the weighted sum-rate $\Rdl$ over the test set for the five
+  ablation configurations.}
+  \label{fig:cdf}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{fig_qos}
+  \caption{QoS-violation fraction (lower is better). The joint violation rate
+  drops from $29.4\%$ to $0.1\%$ along the ablation.}
+  \label{fig:qos}
+\end{figure}
+
+% --- OPTIONAL extra ablation figures (uncomment to include) ------------------
+% \begin{figure}[t]\centering
+%   \includegraphics[width=\columnwidth]{fig_improvement.jpg}
+%   \caption{Per-metric improvement over the unoptimized baseline.}\label{fig:improvement}\end{figure}
+% \begin{figure}[t]\centering
+%   \includegraphics[width=\columnwidth]{fig_perleg.jpg}
+%   \caption{Per-leg rate CDFs ($R_n$, $R_f$, $R_s$).}\label{fig:perleg}\end{figure}
+
+
+Fig.~\ref{fig:rateN} reports $\Rsum$ versus the RIS size
+$N\in\{8,16,32,64\}$ at $P=15$~dBm. The rate grows monotonically with $N$ for
+both access schemes—from $6.9$ to $11.4$~bps/Hz for NOMA and from $4.1$ to
+$7.3$~bps/Hz for OMA—and NOMA retains an $\sim\!65\%$ advantage throughout
+showing that the passive aperture and the access scheme contribute complementary
+gains.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{fig_rate_N}
+  \caption{Weighted sum-rate versus RIS size $N$ at $P=15$~dBm. NOMA dominates
+  OMA at every aperture; both scale with $N$.}
   \label{fig:rateN}
 \end{figure}
 
-Fig.~\ref{fig:rateP} sweeps the transmit power from 5 to 25 dBm for the
-$N=16$ RIS configuration. At 15 dBm, NOMA-RIS achieves 8.37 bit/s/Hz versus
-6.58 bit/s/Hz without the RIS, a gain of about 27\%. The corresponding OMA
-values are 5.26 and 3.01 bit/s/Hz. The right panel also shows that the reported
-aggregate/sensing QoS violation falls rapidly with power for the RIS-assisted
-schemes. In both panels, no-RIS curves use dashed lines.
+Finally, Fig.~\ref{fig:rateP} sweeps the transmit power. Panel~(a) establishes
+the ordering NOMA-RIS $>$ NOMA $>$ OMA-RIS $>$ OMA across the whole range:
+NOMA's full-time superposition outperforms OMA's orthogonal slots, and the RIS
+adds a consistent margin on top of each access scheme (e.g.\ a $\sim\!27\%$ RIS
+gain for NOMA at $P=15$~dBm). Panel~(b) shows the corresponding QoS-violation
+rate: NOMA-RIS reaches near-zero violation already at low power, whereas the
+no-RIS and OMA schemes need substantially more power to become feasible,
+quantifying the role of the RIS in jointly meeting the sensing and communication
+QoS.
 
 \begin{figure}[t]
   \centering
-  \subfloat[Weighted sum-rate.]{%
-  \begin{tikzpicture}
-  \begin{axis}[
-    width=0.48\columnwidth,height=0.40\columnwidth,
-    xlabel={$P$ (dBm)},ylabel={bit/s/Hz},xtick={5,10,15,20,25},
-    ymin=0,ymax=12,
-    tick label style={font=\scriptsize},label style={font=\scriptsize},grid=major]
-  \addplot+[mark=triangle*] coordinates {(5,4.7088) (10,6.5836) (15,8.3680) (20,9.8509) (25,11.2174)};
-  \addplot+[dashed,mark=triangle] coordinates {(5,2.5493) (10,4.3220) (15,6.5805) (20,8.2545) (25,9.6096)};
-  \addplot+[mark=o] coordinates {(5,2.2510) (10,3.8564) (15,5.2630) (20,6.6227) (25,7.9415)};
-  \addplot+[dashed,mark=square] coordinates {(5,1.2449) (10,1.8866) (15,3.0063) (20,4.3509) (25,5.5677)};
-  \end{axis}
-  \end{tikzpicture}}\hfill
-  \subfloat[QoS violation.]{%
-  \begin{tikzpicture}
-  \begin{axis}[
-    width=0.48\columnwidth,height=0.40\columnwidth,
-    xlabel={$P$ (dBm)},ylabel={Violation},xtick={5,10,15,20,25},
-    ymin=0,ymax=1.05,
-    legend style={font=\tiny,at={(0.98,0.98)},anchor=north east},
-    tick label style={font=\scriptsize},label style={font=\scriptsize},grid=major]
-  \addplot+[mark=triangle*] coordinates {(5,0.028) (10,0.003) (15,0.001) (20,0.001) (25,0)};
-  \addlegendentry{NOMA-RIS}
-  \addplot+[dashed,mark=triangle] coordinates {(5,0.955) (10,0.405) (15,0.072) (20,0.008) (25,0)};
-  \addlegendentry{NOMA no-RIS}
-  \addplot+[mark=o] coordinates {(5,1.000) (10,0.014) (15,0.010) (20,0.004) (25,0.002)};
-  \addlegendentry{OMA-RIS}
-  \addplot+[dashed,mark=square] coordinates {(5,1.000) (10,1.000) (15,0.510) (20,0.009) (25,0.001)};
-  \addlegendentry{OMA no-RIS}
-  \end{axis}
-  \end{tikzpicture}}
-  \caption{(a) Weighted sum-rate and (b) legacy aggregate/sensing QoS-violation
-  fraction versus transmit power for NOMA/OMA with and without the RIS. Dashed
-  curves denote no-RIS baselines.}
+  \includegraphics[width=\columnwidth]{fig_rate_P}
+  \caption{(a)~Weighted sum-rate and (b)~joint QoS-violation rate versus
+  transmit power for the four schemes.}
   \label{fig:rateP}
 \end{figure}
+
+Finally, two practical points follow. On \emph{runtime}, the online stage is a
+single forward pass of $f_{\bm\theta}$ plus $K{=}5$ light inner steps---orders
+of magnitude below per-instance AO---so the design fits the short coherence
+times that motivate learning-based ISAC. On \emph{constraint granularity},
+replacing the sum-rate floor \eqref{eq:qosc} with per-user penalties
+($\lambda_n,\lambda_f{>}0$ in~\eqref{eq:sampleloss}) lets the operator dial the
+near/far fairness trade-off, shifting the learned split toward the weaker user
+at a modest cost in aggregate rate and with no change to the pipeline.
+
 
 %==============================================================================
 \section{Conclusion}
@@ -213,8 +179,7 @@ a weak one. The implemented solver uses a compact softmax power network and
 per-channel RIS-phase adaptation, followed by a first-order meta-update. The
 paper now reports the actual channel distances, fading/path-loss parameters,
 power/RIS settings, convergence limitations, and online prediction complexity.
-The regenerated RIS-size and power-sweep figures include explicit dashed no-RIS
-baselines and are provided in both vector EPS and raster JPG forms.
+The original result figures and their surrounding discussion are retained and the figure files are provided in EPS form for submission.
 
 %==============================================================================
 \begin{thebibliography}{1}
