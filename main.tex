@@ -127,15 +127,15 @@ baselines using the same channel model and held-out test procedure.
 %==============================================================================
 \section{System Model and Problem Formulation}\section{System Model and Problem Formulation}
 
-\begin{figure*}[t]
+\begin{figure}[t]
 \centering
 \IfFileExists{figs/fig_system_model.eps}{%
-  \includegraphics[width=0.88\textwidth]{fig_system_model}%
+  \includegraphics[width=\columnwidth]{fig_system_model}%
 }{%
   \IfFileExists{figs/fig_system_model.jpg}{%
-    \includegraphics[width=0.88\textwidth]{fig_system_model.jpg}%
+    \includegraphics[width=\columnwidth]{fig_system_model.jpg}%
   }{%
-    \fbox{\parbox[c][36mm][c]{0.84\textwidth}{\centering
+    \fbox{\parbox[c][28mm][c]{0.96\columnwidth}{\centering
     System-model artwork placeholder. Upload \texttt{figs/fig\_system\_model.jpg}
     or the EPS version supplied with the revision.}}%
   }%
@@ -145,7 +145,7 @@ channels are denoted by $\bH_{BR}$ and $\bH_{RB}$, the RIS--user channels by
 $\bh_{RD_n}$ and $\bh_{RD_f}$, and the sensing links by $\bh_{RT}$ and
 $\bh_{TR}$.}
 \label{fig:system}
-\end{figure*}
+\end{figure}
 
 \subsection{System Model}
 As illustrated in Fig.~\ref{fig:system}, an $M$-antenna ISAC BS serves a
