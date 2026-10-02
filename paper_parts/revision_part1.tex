@@ -115,44 +115,50 @@ distances, fading/path-loss settings, RIS size, power, and learning parameters.
 %==============================================================================
 \section{System Model and Problem Formulation}
 
-\begin{figure}[t]
-\centering
-\begin{tikzpicture}[>=Stealth,font=\footnotesize,
-  comm/.style={->,thick,blue!55!black},
-  sens/.style={<->,thick,orange!80!black},
-  block/.style={->,semithick,red!70!black,dashed}]
-\filldraw[fill=blue!8,draw=blue!55!black,thick] (-0.18,0) rectangle (0.18,1.0);
-\foreach \y in {1.0,1.18,1.36}{\draw[blue!55!black,thick] (-0.22,\y)--(0.22,\y);}
-\node[align=center,below=1pt] at (0,0) {BS\\[-2pt]\scriptsize($M$ antennas)};
-\begin{scope}[shift={(2.9,2.85)},rotate=-16]
-  \foreach \i in {0,...,5}{\filldraw[fill=teal!18,draw=teal!55!black]
-  (\i*0.30,0) rectangle (\i*0.30+0.26,0.42);}
-  \draw[teal!55!black,thick] (-0.06,-0.06) rectangle (1.86,0.48);
-\end{scope}
-\node[align=center,above=1pt] at (3.85,3.5) {RIS\\[-2pt]\scriptsize($N$ elements)};
-\node[circle,fill=black,inner sep=1.4pt] (un) at (4.7,1.45) {};
-\node[below=1pt] at (un) {Near user};
-\node[circle,fill=black,inner sep=1.4pt] (uf) at (5.95,0.3) {};
-\node[below=1pt] at (uf) {Far user};
-\node[star,star points=5,star point ratio=0.5,draw=orange!70!black,
-      fill=orange!80,inner sep=1.6pt] (tg) at (1.55,3.35) {};
-\node[above=1pt] at (tg) {Sensing target};
-\draw[comm] (0.23,1.25) -- node[above,sloped]{$\bm{G}$} (2.55,2.75);
-\draw[comm] (3.7,2.55) -- node[above,sloped]{$\bm{r}_n$} (4.62,1.62);
-\draw[comm] (3.95,2.5) -- node[below,sloped,pos=0.55]{$\bm{r}_f$} (5.85,0.45);
-\draw[sens] (0.2,1.12) -- node[above,sloped]{$\bm{G}_T$} (1.42,3.18);
-\draw[block] (0.26,0.72) -- (4.55,1.4);
-\draw[block] (0.26,0.5) -- (5.8,0.35);
-\filldraw[fill=brown!35,draw=brown!65] (2.35,0.30) rectangle (2.72,1.35);
-\node[rotate=90,brown!55!black] at (2.53,0.82) {\scriptsize blockage};
-\end{tikzpicture}
-\caption{System model: a MISO BS serves a near and a far user via NOMA with an
-$N$-element RIS while sensing a point target.}
-\label{fig:system}
-\end{figure}
-
+% \begin{figure}[t]
+% \centering
+% \begin{tikzpicture}[>=Stealth,font=\footnotesize,
+%   comm/.style={->,thick,blue!55!black},
+%   sens/.style={<->,thick,orange!80!black},
+%   block/.style={->,semithick,red!70!black,dashed}]
+% \filldraw[fill=blue!8,draw=blue!55!black,thick] (-0.18,0) rectangle (0.18,1.0);
+% \foreach \y in {1.0,1.18,1.36}{\draw[blue!55!black,thick] (-0.22,\y)--(0.22,\y);}
+% \node[align=center,below=1pt] at (0,0) {BS\\[-2pt]\scriptsize($M$ antennas)};
+% \begin{scope}[shift={(2.9,2.85)},rotate=-16]
+%   \foreach \i in {0,...,5}{\filldraw[fill=teal!18,draw=teal!55!black]
+%   (\i*0.30,0) rectangle (\i*0.30+0.26,0.42);}
+%   \draw[teal!55!black,thick] (-0.06,-0.06) rectangle (1.86,0.48);
+% \end{scope}
+% \node[align=center,above=1pt] at (3.85,3.5) {RIS\\[-2pt]\scriptsize($N$ elements)};
+% \node[circle,fill=black,inner sep=1.4pt] (un) at (4.7,1.45) {};
+% \node[below=1pt] at (un) {Near user};
+% \node[circle,fill=black,inner sep=1.4pt] (uf) at (5.95,0.3) {};
+% \node[below=1pt] at (uf) {Far user};
+% \node[star,star points=5,star point ratio=0.5,draw=orange!70!black,
+%       fill=orange!80,inner sep=1.6pt] (tg) at (1.55,3.35) {};
+% \node[above=1pt] at (tg) {Sensing target};
+% \draw[comm] (0.23,1.25) -- node[above,sloped]{$\bm{G}$} (2.55,2.75);
+% \draw[comm] (3.7,2.55) -- node[above,sloped]{$\bm{r}_n$} (4.62,1.62);
+% \draw[comm] (3.95,2.5) -- node[below,sloped,pos=0.55]{$\bm{r}_f$} (5.85,0.45);
+% \draw[sens] (0.2,1.12) -- node[above,sloped]{$\bm{G}_T$} (1.42,3.18);
+% \draw[block] (0.26,0.72) -- (4.55,1.4);
+% \draw[block] (0.26,0.5) -- (5.8,0.35);
+% \filldraw[fill=brown!35,draw=brown!65] (2.35,0.30) rectangle (2.72,1.35);
+% \node[rotate=90,brown!55!black] at (2.53,0.82) {\scriptsize blockage};
+% \end{tikzpicture}
+% \caption{System model: a MISO BS serves a near and a far user via NOMA with an
+% $N$-element RIS while sensing a point target.}
+% \label{fig:system}
+% \end{figure}
+\begin{figure}[h!]
+		\centering
+		\includegraphics[width=1\linewidth]{system_model.png}
+		\caption{An RIS-assisted NOMA-ISAC downlink system model.}
+		\label{system_model}
+	\end{figure}
+    \vspace{-0.1cm}
 \subsection{System Model}
-As illustrated in Fig.~\ref{fig:system}, a BS equipped with $M$ antennas serves
+As illustrated in Fig.~\ref{system_model}, a BS equipped with $M$ antennas serves
 a single-antenna near user (n) and far user (f) and illuminates a point sensing
 target (T). The RIS contains $N$ passive reflecting elements. Following the
 standard RIS model in \cite{zou2023ml,wei2026ris}, the coefficient of element
