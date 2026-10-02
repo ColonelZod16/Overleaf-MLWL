@@ -108,7 +108,6 @@ limitations and complexity and compare RIS/no-RIS and NOMA/OMA designs on
 held-out channels.
 
 %==============================================================================
-\section{System Model and Problem Formulation}%==============================================================================
 \section{System Model and Problem Formulation}
 
 \begin{figure}[t]
@@ -233,7 +232,7 @@ This follows RIS-NOMA meta-learning~\cite{zou2023ml}; the implemented
 first-order variant avoids the full higher-order graph
 \cite{fallah2020maml,ji2022maml}.
 
-\subsection{Feature Map and Power-Allocation Network}\subsection{Feature Map and Power-Allocation Network}\label{sec:feat}
+\subsection{Feature Map and Power-Allocation Network}\label{sec:feat}
 The nine-dimensional feature $\bm z$ contains six effective gains (in dB),
 communication/sensing QoS levels, and the SNR budget. A
 9--256--256--256--3 LayerNorm/LeakyReLU network produces
@@ -346,7 +345,7 @@ differ; standard smooth MAML results therefore do not directly apply
 \cite{zou2023ml,fallah2020maml,ji2022maml}. Convergence is assessed empirically
 from the fixed-step inner loop and the outer loss/rate plateau.
 
-\subsection{Computational Complexity}\subsection{Computational Complexity}
+\subsection{Computational Complexity}
 Let $P_{\bm\theta}$ be the network parameter count
 ($\approx1.36\times10^5$). One inner step requires the network forward/backward
 cost plus cascaded-channel and sensing-beam operations:
@@ -369,7 +368,7 @@ Table~\ref{tab:system} therefore reports one equivalent $[x,y,z]$ embedding that
 reproduces those lengths; only link distances enter the path-loss model.
 Table~\ref{tab:ml} lists the learning settings.
 
-\begin{table}[t]\begin{table}[t]
+\begin{table}[t]
 \centering
 \caption{System and channel parameters.}
 \label{tab:system}
@@ -506,7 +505,6 @@ channel. Simulations show stable training and consistent gains from RIS
 assistance and NOMA across the evaluated operating points.
 
 %==============================================================================
-\begin{thebibliography}{1}%==============================================================================
 \begin{thebibliography}{1}
 \bibitem{liu2022isac}
 F.~Liu \emph{et al.}, ``Integrated sensing and communications: Toward
